@@ -1,0 +1,172 @@
+<div>
+  <h1 class="text-center mt-5">Productos en tiempo real</h1>
+</div>
+<div class="container mt-5 pt-5">
+  <table class="table">
+    <thead>
+      <tr>
+        <th scope="col">#</th>
+        <th scope="col">Titulo</th>
+        <th scope="col">Descripcion</th>
+        <th scope="col">Code</th>
+        <th scope="col">Precio</th>
+        <th scope="col">Status</th>
+        <th scope="col">Stock</th>
+        <th scope="col">Categoria</th>
+        <th scope="col">Imagen</th>
+      </tr>
+    </thead>
+    <tbody id="table-body"></tbody>
+  </table>
+</div>
+
+<div class="container d-flex flex-column justify-content-center aling-items-center my-5 w-50 bg-light rounded p-5">
+  <h2 class="text-center mb-3">Añade un producto</h2>
+  <form action="/api/products" onsubmit="submitFormNewProduct(event)" class="d-flex flex-column justify-content-center aling-items-center" method="post">
+    <div>
+      <label for="title" class="form-label">Titulo:</label>
+      <input type="text" class="form-control" id="title" name="title"/>
+    </div>
+    <div>
+      <label for="description" class="form-label">Descripcion:</label>
+      <input type="text" class="form-control" id="description" name="description"/>
+    </div>
+    <div>
+      <label for="code" class="form-label">Codigo:</label>
+      <input type="text" class="form-control" id="code" name="code"/>
+    </div>
+    <div>
+      <label for="price" class="form-label">Precio:</label>
+      <input type="text" class="form-control" id="price" name="price"/>
+    </div>
+    <div>
+      <label for="status" class="form-label">Status:</label>
+      <input type="text" class="form-control" id="status" name="status"/>
+    </div>
+    <div>
+      <label for="stock" class="form-label">Stock:</label>
+      <input type="text" class="form-control" id="stock" name="stock"/>
+    </div>
+    <div>
+      <label for="category" class="form-label">Categoria</label>
+      <input type="text" class="form-control" id="category" name="category"/>
+    </div>
+    <div class="mb-3">
+      <label for="thumbnail" class="form-label">Imagen:</label>
+      <input type="text" class="form-control" id="thumbnail" name="thumbnail"/>
+    </div>
+    <button type="submit"  class="btn btn-primary">Añadir</button>
+  </form>
+</div>
+
+<div class="container d-flex flex-column justify-content-center aling-items-center my-5 w-50 bg-light rounded p-5">
+  <h2 class="text-center mb-3">Elimina un producto</h2>
+  <form class="d-flex flex-column justify-content-center aling-items-center">
+    <div class="mb-3">
+      <label for="id" class="form-label">Introduce el ID del producto:</label>
+      <input type="text" class="form-control" id="id" name="id"/>
+    </div>
+    <button id="delete-btn" class="btn btn-danger">Eliminar</button>
+  </form>
+</div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+  function submitFormNewProduct(event) {
+    event.preventDefault();
+    const formData = new FormData(event.target);
+     const formDataObject = Object.fromEntries(formData.entries());
+
+    fetch('http://localhost:8080/api/products', {
+    method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(formDataObject)
+    })
+    .then(response => {
+      console.log('Solicitud POST exitosa');
+    })
+    .catch(error => {
+      console.error('Error en la solicitud POST:', error);
+    });
+  }
+
+  document.getElementById('delete-btn').addEventListener('click', function() {
+    event.preventDefault();
+    let id = document.getElementById('id').value 
+
+    fetch('/api/products/'+id, {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    })
+    .then(response => {
+      if (response.ok) {
+        console.log('Solicitud DELETE exitosa');
+      } else {
+        console.error('Error en la solicitud DELETE:', response.status);
+      }
+    })
+    .catch(error => {
+      console.error('Error en la solicitud DELETE:', error);
+    });
+
+  });
+
+  const socket = io();
+
+  function updateList(data) {
+    const tableBody = document.getElementById('table-body');
+    tableBody.innerHTML = ""
+    
+    data.forEach((item) => {
+      let templateHTML = ""
+      const tr = document.createElement('tr');
+      tr.setAttribute('product-id', item.id);
+      templateHTML = templateHTML += `<td>${item.id}</td>`
+      templateHTML = templateHTML += `<td>${item.title}</td>`
+      templateHTML = templateHTML += `<td>${item.description}</td>`
+      templateHTML = templateHTML += `<td>${item.code}</td>`
+      templateHTML = templateHTML += `<td>${item.price}</td>`
+      templateHTML = templateHTML += `<td>${item.status}</td>`
+      templateHTML = templateHTML += `<td>${item.stock}</td>`
+      templateHTML = templateHTML += `<td>${item.category}</td>`
+      templateHTML = templateHTML += `<td>${item.thumbnail}</td>`
+      tr.innerHTML = templateHTML
+      tableBody.appendChild(tr);
+    });
+  }
+
+  socket.on('initialData', (data) => {
+    updateList(data);
+  });
+
+  socket.on('newProduct', (newProduct) => {
+    const tableBody = document.getElementById('table-body');
+    let templateHTML = ""
+      const tr = document.createElement('tr');
+      tr.setAttribute('product-id', newProduct.id);
+      templateHTML = templateHTML += `<td>${newProduct.id}</td>`
+      templateHTML = templateHTML += `<td>${newProduct.title}</td>`
+      templateHTML = templateHTML += `<td>${newProduct.description}</td>`
+      templateHTML = templateHTML += `<td>${newProduct.code}</td>`
+      templateHTML = templateHTML += `<td>${newProduct.price}</td>`
+      templateHTML = templateHTML += `<td>${newProduct.status}</td>`
+      templateHTML = templateHTML += `<td>${newProduct.stock}</td>`
+      templateHTML = templateHTML += `<td>${newProduct.category}</td>`
+      templateHTML = templateHTML += `<td>${newProduct.thumbnail}</td>`
+      tr.innerHTML = templateHTML
+      tableBody.appendChild(tr);
+  });
+
+  socket.on('deleteProduct', (productId) => {
+    const tableBody = document.getElementById('table-body');
+    const tableItem = document.querySelector(`tr[product-id="${productId}"]`);
+    if (tableItem) {
+      tableBody.removeChild(tableItem);
+    }
+  });
+
+</script>
